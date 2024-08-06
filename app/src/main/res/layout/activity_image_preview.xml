@@ -22,7 +22,25 @@
             app:layout_constraintTop_toTopOf="parent"
             app:tint="#5648FB" />
 
+    <ImageView
+        android:id="@+id/save"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:layout_marginEnd="20dp"
+        android:src="@drawable/save"
+        app:layout_constraintBottom_toBottomOf="@+id/back"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/back" />
 
+    <ImageView
+        android:id="@+id/cropButton"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:layout_marginEnd="10dp"
+        android:src="@drawable/crop"
+        app:layout_constraintBottom_toBottomOf="@+id/save"
+        app:layout_constraintEnd_toStartOf="@+id/save"
+        app:layout_constraintTop_toTopOf="@+id/save" />
     <ImageView
         android:id="@+id/image"
         android:layout_width="0dp"
@@ -42,7 +60,7 @@
         android:layout_height="80dp"
         android:layout_marginBottom="5dp"
         android:paddingVertical="5dp"
-        app:layout_constraintBottom_toTopOf="@+id/bottomNavigationLayout">
+        app:layout_constraintBottom_toBottomOf="parent">
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
@@ -63,6 +81,7 @@
 
                 <ImageView
                     android:id="@+id/normal"
+                    android:padding="3dp"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     />
@@ -95,6 +114,8 @@
                 >
                 <ImageView
                     android:id="@+id/greyScale"
+                    android:padding="3dp"
+
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     />
@@ -126,6 +147,8 @@
                 >
                 <ImageView
                     android:id="@+id/blackAndWhite"
+                    android:padding="3dp"
+
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     />
@@ -157,6 +180,8 @@
                 >
                 <ImageView
                     android:id="@+id/lighten"
+                    android:padding="3dp"
+
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     />
@@ -189,6 +214,8 @@
 
                 <ImageView
                     android:id="@+id/magic"
+                    android:padding="3dp"
+
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"/>
 
@@ -219,6 +246,8 @@
 
                 <ImageView
                     android:id="@+id/noShadow"
+                    android:padding="3dp"
+
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     />
@@ -301,86 +330,6 @@
 
     </LinearLayout>
 
-    <LinearLayout
-        android:id="@+id/bottomNavigationLayout"
-        android:layout_width="match_parent"
-        android:layout_height="80dp"
-        android:background="#5648FC"
-        android:orientation="horizontal"
-        app:layout_constraintBottom_toBottomOf="parent"
-        >
-
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:orientation="horizontal"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent">
-            <Space
-                android:layout_width="0dp"
-                android:layout_height="0dp"
-                android:layout_weight="1" />
-        <TextView
-            android:id="@+id/cropButton"
-            android:layout_width="50dp"
-            android:layout_height="50dp"
-            android:textAlignment="center"
-            android:text="Crop"
-            android:textColor="@color/white"
-            app:drawableTint="@color/white"
-            app:drawableTopCompat="@drawable/baseline_crop_24" />
-            <Space
-                android:layout_width="0dp"
-                android:layout_height="0dp"
-                android:layout_weight="1" />
-            <TextView
-                android:id="@+id/retake"
-                android:layout_width="50dp"
-                android:layout_height="50dp"
-                android:textAlignment="center"
-                android:text="Retake"
-                android:textColor="@color/white"
-                app:drawableTint="@color/white"
-                app:drawableTopCompat="@drawable/baseline_camera_24"
-                 />
-            <Space
-                android:layout_width="0dp"
-                android:layout_height="0dp"
-                android:layout_weight="1" />
-
-            <TextView
-                android:id="@+id/delete"
-                android:layout_width="50dp"
-                android:layout_height="50dp"
-                android:textAlignment="center"
-                android:text="Delete"
-                android:textColor="@color/white"
-                app:drawableTint="@color/white"
-                app:drawableTopCompat="@drawable/baseline_delete_24"/>
-            <Space
-                android:layout_width="0dp"
-                android:layout_height="0dp"
-                android:layout_weight="1" />
-        </LinearLayout>
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:orientation="horizontal"
-           >
-            <ImageView
-                android:id="@+id/save"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:src="@drawable/save"/>
-
-
-
-        </LinearLayout>
-    </LinearLayout>
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"

@@ -1,8 +1,6 @@
 package com.example.documentsscanner;
 
-import static com.example.documentsscanner.ImagePreview.delete;
 import static com.example.documentsscanner.ImagePreview.position;
-import static com.example.documentsscanner.ImagePreview.retake;
 import static com.example.documentsscanner.ImagePreview.save;
 
 import android.Manifest;
@@ -24,6 +22,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 
 import androidx.activity.result.ActivityResult;
@@ -65,24 +64,26 @@ public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";
 
     private static final String FULL_MODE = "FULL";
-    private static final int REQUEST_WRITE_STORAGE = 112;
+    static final int REQUEST_WRITE_STORAGE = 112;
     private static final int WRITE_EXTERNAL_STORAGE_REQUEST_CODE = 112;
     private static final String BASE_MODE = "BASE";
     private static final String BASE_MODE_WITH_FILTER = "BASE_WITH_FILTER";
     private String selectedMode = FULL_MODE;
     private static MainActivity instance;
-    ConstraintLayout selectedImagesLayout;
-    ImageView  selectedCancel;
+    ConstraintLayout selectedImagesLayout, menuLayout;
+    ImageView  selectedCancel,shareButton,homeButton,saveButton,selectedSave,selectedShare, selectedDelete,menuButton;
+    ConstraintLayout mainLayout;
     private static final int MAX_WIDTH_DOC = 300;
     private static final int MAX_WIDTH_PDF = 600;
     private static final int MAX_HEIGHT_PDF = 800;
     private static final int MAX_HEIGHT_DOC = 400;
-    TextView selectedImagesText, selectedDelete, homeButton, shareButton, saveButton, shareAsImage, shareAsPdf,shareAsWord,selectedSave,selectedShare;
+    TextView selectedImagesText, shareAsImage, shareAsPdf,shareAsWord;
     LinearLayout shareAs, saveAs, selectedNavigation;
-
+    ImagePreview imagePreview;
     RecyclerView recyclerView;
     ScannedRecycleAdapter adapter;
     int editPosition = -1;
+    public String folderName;
 
 
 
@@ -90,6 +91,8 @@ public class MainActivity extends AppCompatActivity {
     boolean editImage = false;
     private Uri pdfUri;
     private GmsDocumentScanningResult lastScanResult;
+    public static   List<Uri> images1 = new ArrayList<>();
+
     List<Uri> images = new ArrayList<>();
 
     @Override
@@ -104,6 +107,7 @@ public class MainActivity extends AppCompatActivity {
 //        recyclerView.setLayoutParams(layoutParams);
         adapter = new ScannedRecycleAdapter(images, this);
         recyclerView.setAdapter(adapter);
+        mainLayout = findViewById(R.id.mainLayout);
         selectedImagesLayout = findViewById(R.id.selectedImagesLayout);
         selectedDelete = findViewById(R.id.selectedDelete);
         selectedCancel = findViewById(R.id.selectedCancel);
@@ -118,8 +122,31 @@ public class MainActivity extends AppCompatActivity {
         shareAs = findViewById(R.id.shareAs);
         selectedSave = findViewById(R.id.selectedSave);
         selectedShare = findViewById(R.id.selectedShare);
+        menuLayout = findViewById(R.id.menuLayout);
+        menuButton = findViewById(R.id.menuButton);
+        folderName = getIntent().getStringExtra("name");
+        Log.d("MainActivity", "onCreate: " + folderName);
 
+        mainLayout.setOnClickListener(v -> {
+            if(shareAs.getVisibility() == View.VISIBLE){
+                shareAs.setVisibility(View.GONE);
+                Log.d("MainActivity", "share: ");
 
+            }
+            if(saveAs.getVisibility() == View.VISIBLE){
+                saveAs.setVisibility(View.GONE);
+                Log.d("MainActivity", "save: ");
+
+            }
+            if ( menuLayout.getVisibility() == View.VISIBLE) {
+                menuLayout.setVisibility(View.GONE);
+
+            };
+            Log.d("MainActivity", "onCreate: ");
+        });
+        homeButton.setOnClickListener(v -> {
+            finish();
+        });
         selectedSave.setOnClickListener(v -> {
             saveAs.setVisibility(View.VISIBLE);
         });
@@ -131,11 +158,21 @@ public class MainActivity extends AppCompatActivity {
 
         saveButton.setOnClickListener(v -> {
             saveAs.setVisibility(View.VISIBLE);
+            shareAs.setVisibility(View.GONE);
         });
         shareButton.setOnClickListener(v -> {
             shareAs.setVisibility(View.VISIBLE);
+            saveAs.setVisibility(View.GONE);
         });
-
+        menuButton.setOnClickListener(v -> {
+            if(menuLayout.getVisibility() == View.VISIBLE){
+                menuLayout.setVisibility(View.GONE);
+            }else{
+                menuLayout.setVisibility(View.VISIBLE);
+            }
+            saveAs.setVisibility(View.GONE);
+            shareAs.setVisibility(View.GONE);
+        });
 
         selectedCancel.setOnClickListener(v -> {
             selectedImagesLayout.setVisibility(View.GONE);
@@ -143,7 +180,14 @@ public class MainActivity extends AppCompatActivity {
             if(adapter != null){
                 adapter.unselect();
             }
+            if(shareAs.getVisibility() == View.VISIBLE){
+                shareAs.setVisibility(View.GONE);
 
+            }
+            if(saveAs.getVisibility() == View.VISIBLE){
+                saveAs.setVisibility(View.GONE);
+
+            }
         });
         selectedDelete.setOnClickListener(v -> {
             selectedImagesLayout.setVisibility(View.GONE);
@@ -154,8 +198,13 @@ public class MainActivity extends AppCompatActivity {
                 adapter.selectedList.clear();
                 adapter.selection = false;
             }
+            saveDraft();
         });
-
+        if(images1 != null && !images1.isEmpty()){
+            images.addAll(images1);
+            images1.clear();
+            adapter.notifyDataSetChanged();
+        }
         scannerLauncher = registerForActivityResult(new StartIntentSenderForResult(), this::handleActivityResult);
     }
 
@@ -193,25 +242,11 @@ public class MainActivity extends AppCompatActivity {
                         adapter.notifyDataSetChanged();
                     }
                 save = false;
-            }
-            else if (requestCode == 20 && delete) {
+                saveDraft();
 
-                if(position != -1){
-                    images.remove(position);
-                    adapter.notifyItemRemoved(position);
-                    adapter.notifyItemRangeChanged(position, images.size());
-                }
-                delete = false;
             }
-            else if (requestCode == 20 && retake) {
 
-//                if(position != -1){
-//                    activity.editPosition = i;
-//                    activity.editImage = true;
-//                    onScanButtonClicked(holder.change);
-//                }
-                retake = false;
-            }
+
         }
     private void handleActivityResult(ActivityResult activityResult) {
         int resultCode = activityResult.getResultCode();
@@ -236,8 +271,13 @@ public class MainActivity extends AppCompatActivity {
                         images.add(lastScanResult.getPages().get(i).getImageUri());
                     }
                     adapter.notifyDataSetChanged();
+                    saveDraft();
+                    Intent intent = new Intent(this, ImagePreview.class);
+                    intent.putExtra("uri", lastScanResult.getPages().get(0).getImageUri());
+                    intent.putExtra("position", images.size() - 1);
+                    intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    startActivityForResult(intent, 20);
 
-                    Log.d(TAG, "adapter: " + adapter.getItemCount());
                 }
             }
             if (lastScanResult.getPdf() != null) {
@@ -246,6 +286,8 @@ public class MainActivity extends AppCompatActivity {
 
             }
         } else if (resultCode == Activity.RESULT_CANCELED) {
+            if(editImage && imagePreview != null){
+            }
         Log.d(TAG, "handleActivityResult: Canceled");
         } else {
             Log.d(TAG, "handleActivityResult: Failed");
@@ -254,19 +296,19 @@ public class MainActivity extends AppCompatActivity {
 
     public void onSavePdfButtonClicked(View view) {
         if(!adapter.selection) {
-            savePdfFile(images);
+            saveFiles.savePdfFile(images,this);
         }
         else{
-            savePdfFile(adapter.selectedList);
+            saveFiles.savePdfFile(adapter.selectedList,this);
         }
         saveAs.setVisibility(View.GONE);
     }
     public void onSharePdfButtonClicked(View view){
         if(!adapter.selection) {
-            sharePdfFile(images);
+            shareFiles.sharePdfFile(images,this);
         }
         else{
-            sharePdfFile(adapter.selectedList);
+            shareFiles.sharePdfFile(adapter.selectedList,this);
         }
         shareAs.setVisibility(View.GONE);
     }
@@ -276,12 +318,12 @@ public class MainActivity extends AppCompatActivity {
     public void onSaveImageButtonClicked(View view) {
         if(!adapter.selection) {
             for (int i = 0; i < images.size(); i++) {
-                saveFile("image/jpeg", "saved_scanned_image " + System.currentTimeMillis() + ".jpg", images.get(i));
+                saveFiles.saveImageFile("image/jpeg", "saved_scanned_image " + System.currentTimeMillis() + ".jpg", images.get(i),this);
             }
         }
         else{
             for (int i = 0; i < adapter.selectedList.size(); i++) {
-                saveFile("image/jpeg", "saved_scanned_image " + System.currentTimeMillis() + ".jpg", adapter.selectedList.get(i));
+                saveFiles.saveImageFile("image/jpeg", "saved_scanned_image " + System.currentTimeMillis() + ".jpg", adapter.selectedList.get(i),this);
             }
         }
         saveAs.setVisibility(View.GONE);
@@ -293,516 +335,128 @@ public class MainActivity extends AppCompatActivity {
 
     public void onSaveDocButtonClicked(View view) {
         if(!adapter.selection) {
-            saveDocFile(images);
+            saveFiles.saveDocFile(images,this);
         }
         else{
-            saveDocFile(adapter.selectedList);
+            saveFiles.saveDocFile(adapter.selectedList,this);
+
         }
         saveAs.setVisibility(View.GONE);
     }
     public void onShareDocButtonClicked(View view){
         if(!adapter.selection) {
-            shareDocFile(images);
+           shareFiles.shareDocFile(images,this);
         }
         else{
-            shareDocFile(adapter.selectedList);
+            shareFiles.shareDocFile(adapter.selectedList,this);
         }
         shareAs.setVisibility(View.GONE);
     }
-    private void savePdfFile(List<Uri> imageUris) {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
-                    REQUEST_WRITE_STORAGE);
-            return;
+
+
+
+    public void onShareButtonClicked(View view) {
+        ArrayList<Uri> imageUris = new ArrayList<>();
+
+        if (!adapter.selection) {
+            for (int i = 0; i < images.size(); i++) {
+                Uri tempUri = createTemporaryFile(images.get(i), "shared_image_" + System.currentTimeMillis() + ".jpg");
+                if (tempUri != null) {
+                    imageUris.add(tempUri);
+                }
+            }
+        } else {
+            for (int i = 0; i < adapter.selectedList.size(); i++) {
+                Uri tempUri = createTemporaryFile(adapter.selectedList.get(i), "shared_image_" + System.currentTimeMillis() + ".jpg");
+                if (tempUri != null) {
+                    imageUris.add(tempUri);
+                }
+            }
         }
 
         if (!imageUris.isEmpty()) {
-            try {
-                PdfDocument document = new PdfDocument();
-                ContentResolver contentResolver = getContentResolver();
-
-                for (Uri imageUri : imageUris) {
-                    // Handle potential null URIs
-                    if (imageUri == null) {
-                        continue; // Skip to next image
-                    }
-
-                    InputStream inputStream = contentResolver.openInputStream(imageUri);
-                    if (inputStream == null) {
-                        throw new IOException("Unable to open input stream from URI: " + imageUri);
-                    }
-
-                    Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
-                    int width = bitmap.getWidth();
-                    int height = bitmap.getHeight();
-
-                    // Scale the image down to fit within the maximum dimensions while maintaining the aspect ratio
-                    if (width > height) {
-                        float ratio = (float) width / height;
-                        if (width > MAX_WIDTH_PDF) {
-                            width = MAX_WIDTH_PDF;
-                            height = (int) (width / ratio);
-                        }
-                        if (height > MAX_HEIGHT_PDF) {
-                            height = MAX_HEIGHT_PDF;
-                            width = (int) (height * ratio);
-                        }
-                    } else {
-                        float ratio = (float) height / width;
-                        if (height > MAX_HEIGHT_PDF) {
-                            height = MAX_HEIGHT_PDF;
-                            width = (int) (height / ratio);
-                        }
-                        if (width > MAX_WIDTH_PDF) {
-                            width = MAX_WIDTH_PDF;
-                            height = (int) (width * ratio);
-                        }
-                    }
-
-                    Bitmap scaledBitmap = Bitmap.createScaledBitmap(bitmap, width, height, true);
-
-                    PdfDocument.PageInfo pageInfo = new PdfDocument.PageInfo.Builder(width, height, imageUris.indexOf(imageUri) + 1).create();
-                    PdfDocument.Page page = document.startPage(pageInfo);
-                    page.getCanvas().drawBitmap(scaledBitmap, 0, 0, null);
-                    document.finishPage(page);
-                    inputStream.close();
-                }
-
-                // Save the document to storage
-                Uri documentUri = null;
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    ContentValues contentValues = new ContentValues();
-                    contentValues.put(MediaStore.MediaColumns.DISPLAY_NAME, "saved_scanned_document.pdf");
-                    contentValues.put(MediaStore.MediaColumns.MIME_TYPE, "application/pdf");
-                    contentValues.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOCUMENTS);
-
-                    documentUri = contentResolver.insert(MediaStore.Files.getContentUri("external"), contentValues);
-                } else {
-                    File documentsFolder = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS);
-                    if (!documentsFolder.exists()) {
-                        documentsFolder.mkdirs();
-                    }
-                    File destFile = new File(documentsFolder, "saved_scanned_document.pdf");
-                    documentUri = Uri.fromFile(destFile);
-                }
-
-                if (documentUri == null) {
-                    throw new IOException("Unable to create destination file URI");
-                }
-
-                try (OutputStream outputStream = contentResolver.openOutputStream(documentUri)) {
-                    document.writeTo(outputStream);
-                } finally {
-                    document.close();
-                }
-
-                Log.d(TAG, "Document saved to: " + documentUri.toString());
-            } catch (IOException e) {
-                e.printStackTrace();
-               Log.d(TAG,"Error saving PDF: " + e.getMessage());
-            }
-        } else {
-            Log.d(TAG,"No Files to save");
+            shareFiles.shareImages(imageUris,this);
         }
     }
-    private byte[] generatePdfByteArray(List<Uri> imageUris) {
+
+    Uri createTemporaryFile(Uri sourceUri, String fileName) {
         try {
-            PdfDocument document = new PdfDocument();
             ContentResolver contentResolver = getContentResolver();
+            InputStream inputStream = contentResolver.openInputStream(sourceUri);
 
-            for (Uri imageUri : imageUris) {
-                // Handle potential null URIs
-                if (imageUri == null) {
-                    continue; // Skip to next image
+            if (inputStream == null) {
+                throw new IOException("Unable to open input stream from URI");
+            }
+
+            File tempFile = new File(getCacheDir(), fileName);
+            try (OutputStream outputStream = new FileOutputStream(tempFile)) {
+                byte[] buffer = new byte[1024];
+                int bytesRead;
+                while ((bytesRead = inputStream.read(buffer)) != -1) {
+                    outputStream.write(buffer, 0, bytesRead);
                 }
-
-                InputStream inputStream = contentResolver.openInputStream(imageUri);
-                if (inputStream == null) {
-                    throw new IOException("Unable to open input stream from URI: " + imageUri);
-                }
-
-                Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
-                int width = bitmap.getWidth();
-                int height = bitmap.getHeight();
-
-                // Scale the image down to fit within the maximum dimensions while maintaining the aspect ratio
-                if (width > height) {
-                    float ratio = (float) width / height;
-                    if (width > MAX_WIDTH_PDF) {
-                        width = MAX_WIDTH_PDF;
-                        height = (int) (width / ratio);
-                    }
-                    if (height > MAX_HEIGHT_PDF) {
-                        height = MAX_HEIGHT_PDF;
-                        width = (int) (height * ratio);
-                    }
-                } else {
-                    float ratio = (float) height / width;
-                    if (height > MAX_HEIGHT_PDF) {
-                        height = MAX_HEIGHT_PDF;
-                        width = (int) (height / ratio);
-                    }
-                    if (width > MAX_WIDTH_PDF) {
-                        width = MAX_WIDTH_PDF;
-                        height = (int) (width * ratio);
-                    }
-                }
-
-
-                Bitmap scaledBitmap = Bitmap.createScaledBitmap(bitmap, width, height, true);
-
-
-                PdfDocument.PageInfo pageInfo = new PdfDocument.PageInfo.Builder(width, height, imageUris.indexOf(imageUri) + 1).create();
-                PdfDocument.Page page = document.startPage(pageInfo);
-                page.getCanvas().drawBitmap(scaledBitmap, 0, 0, null);
-                document.finishPage(page);
+            } finally {
                 inputStream.close();
             }
 
-            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-            document.writeTo(byteArrayOutputStream);
-            document.close();
-            return byteArrayOutputStream.toByteArray();
+            return FileProvider.getUriForFile(this, getPackageName() + ".provider", tempFile);
         } catch (IOException e) {
             e.printStackTrace();
-            Log.d(TAG, "Error generating PDF: " + e.getMessage());
+            Log.d("Tag", "Error creating temporary file: " + e.getMessage());
             return null;
         }
     }
-
-    private void sharePdfFile(List<Uri> imageUris) {
-        byte[] pdfByteArray = generatePdfByteArray(imageUris);
-        if (pdfByteArray != null) {
-            try {
-                File cacheDir = new File(getCacheDir(), "pdfs");
-                if (!cacheDir.exists()) {
-                    cacheDir.mkdirs();
-                }
-                File pdfFile = new File(cacheDir, "shared_scanned_document.pdf");
-                try (OutputStream outputStream = new FileOutputStream(pdfFile)) {
-                    outputStream.write(pdfByteArray);
-                }
-
-                Uri pdfUri = FileProvider.getUriForFile(this, getPackageName() + ".provider", pdfFile);
-
-                Intent shareIntent = new Intent(Intent.ACTION_SEND);
-                shareIntent.setType("application/pdf");
-                shareIntent.putExtra(Intent.EXTRA_STREAM, pdfUri);
-                shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                startActivity(Intent.createChooser(shareIntent, "Share PDF using"));
-
-            } catch (IOException e) {
-                e.printStackTrace();
-                Log.d(TAG, "Error sharing PDF: " + e.getMessage());
-            }
-        } else {
-            Log.d(TAG, "Error generating PDF for sharing");
-        }
-    }
-     void saveFile(String mimeType, String fileName, Uri sourceUri) {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
-                    REQUEST_WRITE_STORAGE);
-            return;
-        }
-
-         if (sourceUri != null) {
-             try {
-                 ContentResolver contentResolver = getContentResolver();
-                 InputStream inputStream = contentResolver.openInputStream(sourceUri);
-
-                 if (inputStream == null) {
-                     throw new IOException("Unable to open input stream from URI");
-                 }
-
-                 Uri documentUri = null;
-                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                     ContentValues contentValues = new ContentValues();
-                     contentValues.put(MediaStore.MediaColumns.DISPLAY_NAME, fileName);
-                     contentValues.put(MediaStore.MediaColumns.MIME_TYPE, mimeType); // e.g., "image/jpeg"
-                     contentValues.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_PICTURES);
-
-                     documentUri = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues);
-                 } else {
-                     File picturesFolder = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
-                     if (!picturesFolder.exists()) {
-                         picturesFolder.mkdirs();
-                     }
-                     File destFile = new File(picturesFolder, fileName);
-                     documentUri = Uri.fromFile(destFile);
-                 }
-
-                 if (documentUri == null) {
-                     throw new IOException("Unable to create destination file URI");
-                 }
-
-                 try (OutputStream outputStream = contentResolver.openOutputStream(documentUri)) {
-                     byte[] buffer = new byte[1024];
-                     int bytesRead;
-                     while ((bytesRead = inputStream.read(buffer)) != -1) {
-                         outputStream.write(buffer, 0, bytesRead);
-                     }
-                 } finally {
-                     inputStream.close();
-                 }
-
-                 Log.d("Tag","File saved to: " + documentUri.getPath());
-     } catch (IOException e) {
-                e.printStackTrace();
-                Log.d("tag","Error saving file: " + e.getMessage());
-            }
-        } else {
-            Log.d("Tag","No file to save");
-        }
-    }
-
-    private void saveDocFile(List<Uri> imageUris) {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
-                    REQUEST_WRITE_STORAGE);
-            return;
-        }
-
-        if (!imageUris.isEmpty()) {
-            try {
-                XWPFDocument document = new XWPFDocument();
-
-                ContentResolver contentResolver = getContentResolver();
-                for (Uri imageUri : imageUris) {
-                    // Handle potential null URIs
-                    if (imageUri == null) {
-                        continue; // Skip to next image
-                    }
-
-                    contentResolver = getContentResolver();
-                    InputStream inputStream = contentResolver.openInputStream(imageUri);
-                    if (inputStream == null) {
-                        throw new IOException("Unable to open input stream from URI: " + imageUri);
-                    }
-                    BitmapFactory.Options options = new BitmapFactory.Options();
-                    options.inJustDecodeBounds = true;
-                    BitmapFactory.decodeStream(inputStream, null, options);
-                    int originalWidth = options.outWidth;
-                    int originalHeight = options.outHeight;
-                    inputStream.close(); // Close the input stream and reopen it later
-
-                    // Scale the image down to fit within the maximum dimensions while maintaining the aspect ratio
-                    int width = originalWidth;
-                    int height = originalHeight;
-                    if (originalWidth > originalHeight) {
-                        float ratio = (float) originalWidth / originalHeight;
-                        if (originalWidth > MAX_WIDTH_DOC) {
-                            width = MAX_WIDTH_DOC;
-                            height = (int) (width / ratio);
-                        }
-                        if (height > MAX_HEIGHT_DOC) {
-                            height = MAX_HEIGHT_DOC;
-                            width = (int) (height * ratio);
-                        }
-                    } else {
-                        float ratio = (float) originalHeight / originalWidth;
-                        if (originalHeight > MAX_HEIGHT_DOC) {
-                            height = MAX_HEIGHT_DOC;
-                            width = (int) (height / ratio);
-                        }
-                        if (width > MAX_WIDTH_DOC) {
-                            width = MAX_WIDTH_DOC;
-                            height = (int) (width * ratio);
-                        }
-                    }
-                    inputStream = contentResolver.openInputStream(imageUri);
-
-
-
-                    XWPFParagraph paragraph = document.createParagraph();
-                    XWPFRun run = paragraph.createRun();
-                    run.addCarriageReturn();
-
-                    int pictureType = XWPFDocument.PICTURE_TYPE_JPEG; // Adjust according to your image type
-                    String fileName = "scanned_image_" + imageUris.indexOf(imageUri) + ".jpg"; // Generate unique filename based on index
-
-                    File tempFile = new File(getCacheDir(), fileName);
-                    OutputStream out = new FileOutputStream(tempFile);
-                    IOUtils.copy(inputStream, out);
-                    out.close();
-                    inputStream.close();
-
-                    try (InputStream imageStream = new FileInputStream(tempFile)) {
-
-
-                        document.createParagraph().createRun().addPicture(imageStream, pictureType, fileName, Units.toEMU(width), Units.toEMU(height));
-                    } catch (InvalidFormatException e) {
-                        throw new RuntimeException(e);
-                    } finally {
-                        tempFile.delete(); // Delete the temporary file (optional)
-                    }
-                }
-
-                // Save the document to storage
-                Uri documentUri = null;
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    ContentValues contentValues = new ContentValues();
-                    contentValues.put(MediaStore.MediaColumns.DISPLAY_NAME, "saved_scanned_document.docx");
-                    contentValues.put(MediaStore.MediaColumns.MIME_TYPE, "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
-                    contentValues.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOCUMENTS);
-
-                    documentUri = contentResolver.insert(MediaStore.Files.getContentUri("external"), contentValues);
-                } else {
-                    File documentsFolder = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS);
-                    if (!documentsFolder.exists()) {
-                        documentsFolder.mkdirs();
-                    }
-                    File destFile = new File(documentsFolder, "saved_scanned_document.docx");
-                    documentUri = Uri.fromFile(destFile);
-                }
-
-                if (documentUri == null) {
-                    throw new IOException("Unable to create destination file URI");
-                }
-
-                try (OutputStream outputStream = contentResolver.openOutputStream(documentUri)) {
-                    document.write(outputStream);
-                } finally {
-                    document.close();
-                }
-
-                Log.d("Tag","DOCX saved to: " + documentUri.getPath());
-            } catch (IOException e) {
-                e.printStackTrace();
-                Log.d("Tag","Error saving DOCX: " + e.getMessage());
-            }
-        } else {
-           Log.d(TAG,"No Files to save");
-        }
-    }
-
-    private byte[] generateDocxByteArray(List<Uri> imageUris) {
-        try {
-            XWPFDocument document = new XWPFDocument();
-            ContentResolver contentResolver = getContentResolver();
-
-            for (Uri imageUri : imageUris) {
-                // Handle potential null URIs
-                if (imageUri == null) {
-                    continue; // Skip to next image
-                }
-
-                InputStream inputStream = contentResolver.openInputStream(imageUri);
-                if (inputStream == null) {
-                    throw new IOException("Unable to open input stream from URI: " + imageUri);
-                }
-                BitmapFactory.Options options = new BitmapFactory.Options();
-                options.inJustDecodeBounds = true;
-                BitmapFactory.decodeStream(inputStream, null, options);
-                int originalWidth = options.outWidth;
-                int originalHeight = options.outHeight;
-                inputStream.close(); // Close the input stream and reopen it later
-
-                int width = originalWidth;
-                int height = originalHeight;
-                if (originalWidth > originalHeight) {
-                    float ratio = (float) originalWidth / originalHeight;
-                    if (originalWidth > MAX_WIDTH_DOC) {
-                        width = MAX_WIDTH_DOC;
-                        height = (int) (width / ratio);
-                    }
-                    if (height > MAX_HEIGHT_DOC) {
-                        height = MAX_HEIGHT_DOC;
-                        width = (int) (height * ratio);
-                    }
-                } else {
-                    float ratio = (float) originalHeight / originalWidth;
-                    if (originalHeight > MAX_HEIGHT_DOC) {
-                        height = MAX_HEIGHT_DOC;
-                        width = (int) (height / ratio);
-                    }
-                    if (width > MAX_WIDTH_DOC) {
-                        width = MAX_WIDTH_DOC;
-                        height = (int) (width * ratio);
-                    }
-                }
-                inputStream = contentResolver.openInputStream(imageUri);
-
-                XWPFParagraph paragraph = document.createParagraph();
-                XWPFRun run = paragraph.createRun();
-                run.addCarriageReturn();
-
-                int pictureType = XWPFDocument.PICTURE_TYPE_JPEG; // Adjust according to your image type
-                String fileName = "scanned_image_" + imageUris.indexOf(imageUri) + ".jpg"; // Generate unique filename based on index
-
-                File tempFile = new File(getCacheDir(), fileName);
-                try (OutputStream out = new FileOutputStream(tempFile)) {
-                    IOUtils.copy(inputStream, out);
-                }
-                inputStream.close();
-
-                try (InputStream imageStream = new FileInputStream(tempFile)) {
-                    document.createParagraph().createRun().addPicture(imageStream, pictureType, fileName, Units.toEMU(width), Units.toEMU(height));
-                } catch (InvalidFormatException e) {
-                    throw new RuntimeException(e);
-                } finally {
-                    tempFile.delete(); // Delete the temporary file (optional)
-                }
-            }
-
-            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-            document.write(byteArrayOutputStream);
-            document.close();
-            return byteArrayOutputStream.toByteArray();
-        } catch (IOException e) {
-            e.printStackTrace();
-            Log.d(TAG, "Error generating DOCX: " + e.getMessage());
-            return null;
-        }
-    }
-
-    private void shareDocFile(List<Uri> imageUris) {
-        byte[] docxByteArray = generateDocxByteArray(imageUris);
-        if (docxByteArray != null) {
-            try {
-                File cacheDir = new File(getCacheDir(), "docs");
-                if (!cacheDir.exists()) {
-                    cacheDir.mkdirs();
-                }
-                File docxFile = new File(cacheDir, "shared_scanned_document.docx");
-                try (OutputStream outputStream = new FileOutputStream(docxFile)) {
-                    outputStream.write(docxByteArray);
-                }
-
-                Uri docxUri = FileProvider.getUriForFile(this, getPackageName() + ".provider", docxFile);
-
-                Intent shareIntent = new Intent(Intent.ACTION_SEND);
-                shareIntent.setType("application/vnd.openxmlformats-officedocument.wordprocessingml.document");
-                shareIntent.putExtra(Intent.EXTRA_STREAM, docxUri);
-                shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                startActivity(Intent.createChooser(shareIntent, "Share DOCX using"));
-
-            } catch (IOException e) {
-                e.printStackTrace();
-                Log.d(TAG, "Error sharing DOCX: " + e.getMessage());
-            }
-        } else {
-            Log.d(TAG, "Error generating DOCX for sharing");
-        }
-    }
-
     private void clearCache(Context context) {
         File cacheDir = context.getCacheDir();
-        File[] files = cacheDir.listFiles();
-        if (files != null) {
-            for (File file : files) {
-                file.delete();
+        File externalCacheDir = context.getExternalCacheDir();
+        if (cacheDir != null) {
+            deleteRecursively(cacheDir);
+        }
+        if (externalCacheDir != null) {
+            deleteRecursively(externalCacheDir);
+        }
+        Log.d(TAG, "Cleared cache: " + cacheDir.getAbsolutePath());
+    }
+    private void deleteRecursively(File file) {
+        if (file.isDirectory()) {
+            File[] files = file.listFiles();
+            if (files != null) {
+                for (File child : files) {
+                    deleteRecursively(child); // Recursively delete subdirectories and files
+                }
+            }
+        }
+
+        if (file.delete()) {
+            Log.d(TAG, "Deleted file: " + file.getAbsolutePath());
+        } else {
+            Log.d(TAG, "Failed to delete file: " + file.getAbsolutePath());
+        }
+    }
+    @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+        finish();
+    }
+
+    protected void onDestroy() {
+        super.onDestroy();
+
+          clearCache(this);
+
+    }
+
+    public void saveDraft(){
+        if (images != null && !images.isEmpty()) {
+
+            BitmapSaver bitmapSaver = new BitmapSaver(this);
+            if(folderName != null  && !folderName.equals("")){
+                bitmapSaver.saveBitmaps(images, folderName);
+            }
+            else {
+                bitmapSaver.saveBitmaps(images, null);
             }
         }
     }
-    protected void onDestroy() {
-        super.onDestroy();
-        clearCache(this);
-    }
+
 }

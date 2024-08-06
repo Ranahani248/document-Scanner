@@ -136,6 +136,7 @@ public class ScannedRecycleAdapter extends RecyclerView.Adapter<ScannedRecycleAd
         if (position >= 0 && position < list.size()) {
             // Convert bitmap to URI
             Uri uri = getImageUri(context, bitmap);
+            Log.d("ScannedRecycleAdapter", "currentFilter" + bitmap);
             list.set(position, uri);
             notifyItemChanged(position);
         }
@@ -174,8 +175,6 @@ public class ScannedRecycleAdapter extends RecyclerView.Adapter<ScannedRecycleAd
         public ViewHolder(View view) {
             super(view);
             image = view.findViewById(R.id.scanned_page);
-
-
 
         }
     }

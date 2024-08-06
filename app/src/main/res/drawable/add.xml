@@ -6,17 +6,17 @@
   <path
       android:strokeWidth="1"
       android:pathData="M25,25m-24.5,0a24.5,24.5 0,1 1,49 0a24.5,24.5 0,1 1,-49 0"
-      android:fillColor="#E3E0FF"
+      android:fillColor="#E1DFFF"
       android:fillAlpha="0.16"
-      android:strokeColor="#ffffff"/>
+      android:strokeColor="#5648FC"/>
   <path
       android:pathData="M25,25m-19,0a19,19 0,1 1,38 0a19,19 0,1 1,-38 0"
-      android:fillColor="#E1DFFF"/>
+      android:fillColor="#5648FC"/>
   <group>
     <clip-path
         android:pathData="M14,14h22v22h-22z"/>
     <path
         android:pathData="M31.417,25.917H25.917V31.417H24.083V25.917H18.583V24.083H24.083V18.583H25.917V24.083H31.417V25.917Z"
-        android:fillColor="#5648FC"/>
+        android:fillColor="#E1DFFF"/>
   </group>
 </vector>

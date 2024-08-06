@@ -1,6 +1,7 @@
 package com.example.documentsscanner;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.ColorMatrix;
 import android.graphics.ColorMatrixColorFilter;
@@ -33,12 +34,12 @@ public class ImagePreview extends AppCompatActivity {
     Uri uri;
     SeekBar contrastSeekbar, brightnessSeekbar;
     ImageView imageView ,backButton, saveButton,normalImage, greyScaleImage, blackAndWhiteImage, lightenImage, magicImage, noShadowImage;
-    TextView cropButton, deleteButton, retakeButton;
+    ImageView cropButton;
     CropImageView cropImageView;
     Bitmap bitmap;
     boolean changeImage = false;
     Bitmap currentFilter;
-    static boolean save = false, delete = false, retake = false;
+    static boolean save = false;
     DocumentFilter documentFilter = new DocumentFilter();
     Button cancelCrop, saveCrop;
     static Bitmap currentBitmap, cropBitmap;
@@ -47,14 +48,17 @@ public class ImagePreview extends AppCompatActivity {
     float contrastProgress = 1.0f;
     float saturationProgress = 1.0f;
     float brightnessProgress = 0.0f;
+
     ConstraintLayout croplayout, normal, greyScale, blackAndWhite, lighten,magic, noShadow,selectedFilter;
     LinearLayout seekbarLayout;
+    private static ImagePreview instance;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        EdgeToEdge.enable(this);
         setContentView(R.layout.activity_image_preview);
+        instance = this;
+
         position = getIntent().getIntExtra("position", -1);
         uri = getIntent().getParcelableExtra("uri");
         changeImage = getIntent().getBooleanExtra("changeImage", false);
@@ -64,23 +68,29 @@ public class ImagePreview extends AppCompatActivity {
         croplayout = findViewById(R.id.cropimageLayout);
         saveCrop = findViewById(R.id.saveCrop);
         cropButton = findViewById(R.id.cropButton);
-        deleteButton = findViewById(R.id.delete);
-        retakeButton = findViewById(R.id.retake);
+
         if (uri != null) {
             // Load the image into the ImageView and store the original bitmap
-            Glide.with(this).asBitmap().load(uri).into(new BitmapImageViewTarget(imageView) {
-                @Override
-                public void onResourceReady(@NonNull Bitmap resource, Transition<? super Bitmap> transition) {
-                    super.onResourceReady(resource, transition);
-                    bitmap = resource;
-                    currentBitmap = resource;
-                    currentFilter = bitmap;
-                    cropBitmap = bitmap;
-                    cropped = bitmap;
-                }
-            });
+            Glide.with(this)
+                    .asBitmap()
+                    .load(uri)
+                    .override(1024, 1024) // Set the maximum width and height
+                    .into(new BitmapImageViewTarget(imageView) {
+                        @Override
+                        public void onResourceReady(@NonNull Bitmap resource, Transition<? super Bitmap> transition) {
+                            super.onResourceReady(resource, transition);
+                            bitmap = resource;
+                            currentBitmap = resource;
+                            currentFilter = bitmap;
+                            cropBitmap = bitmap;
+                            cropped = bitmap;
+                        }
+                    });
+
+            // Load a downscaled image into the CropImageView
             cropImageView.setImageUriAsync(uri);
         }
+
 
 
 
@@ -122,13 +132,12 @@ public class ImagePreview extends AppCompatActivity {
 
         seekbarLayout = findViewById(R.id.seekbarLayout);
         backButton  = findViewById(R.id.back);
-        backButton.setOnClickListener(v ->{ onBackPressed(); save = false; delete = false; retake = false;});
+        backButton.setOnClickListener(v ->{ onBackPressed(); save = false;});
 
         saveButton = findViewById(R.id.save);
         saveButton.setOnClickListener(v -> {
-            delete = false;
             save = true;
-            retake = false;
+
             if(changeImage) {
                 MainActivity activity = MainActivity.getInstance();
                 if (activity != null) {
@@ -137,24 +146,9 @@ public class ImagePreview extends AppCompatActivity {
                     finish();
                 }
             }
+            Log.d("ImagePreview", "currentFilter: " + currentFilter);
             onBackPressed();
         });
-        deleteButton.setOnClickListener(v -> {
-           delete = true;
-           save = false;
-           retake = false;
-           onBackPressed();
-        });
-        retakeButton.setOnClickListener(v -> {
-            MainActivity activity = MainActivity.getInstance();
-            if (activity != null) {
-                activity.editPosition = position;
-                activity.editImage = true;
-                activity.onScanButtonClicked(retakeButton);
-                finish();
-            }
-        });
-
 
 
         ConstraintLayout constraintLayout = findViewById(R.id.main);
@@ -333,6 +327,7 @@ public class ImagePreview extends AppCompatActivity {
                         contrastProgress = 1.0f;
                         saturationProgress = 1.0f;
                         brightnessProgress = 0.0f;
+                        Log.d("ImagePreview", "currentFilter B: " + bitmap);
                         currentFilter = bitmap;
                         imageView.setImageBitmap(bitmap);
                         updateSeekBarValues();
@@ -484,5 +479,18 @@ public class ImagePreview extends AppCompatActivity {
         return ret;
     }
 
+    public static void finishImagePreview() {
+        Log.d("TAG", "finishImagePreview: ");
+        if (instance != null) {
+            Log.d("TAG", "finishImagePreview: Done ");
 
+            instance.finish();
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        instance = null;
+    }
 }
